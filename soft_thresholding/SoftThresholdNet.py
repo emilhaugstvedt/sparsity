@@ -70,8 +70,8 @@ class SoftThresholdNet(nn.Module):
         return x
 
     def train_n_epochs(self,
-                    training_loader,
-                    n_epochs,
+                    data_loader: torch.utils.data.DataLoader,
+                    n_epochs: int,
                     lr = 0.001,
                     weight_decay=0,
                     loss_fn  = torch.nn.MSELoss(),
@@ -84,7 +84,7 @@ class SoftThresholdNet(nn.Module):
         loss_fn = torch.nn.MSELoss()
 
         for epoch in range(n_epochs):
-            for (x_batch, y_batch) in training_loader:
+            for (x_batch, y_batch) in data_loader:
                 optimizer.zero_grad()
                 y_pred = self.forward(x_batch)
                 loss = loss_fn(y_pred, y_batch)
