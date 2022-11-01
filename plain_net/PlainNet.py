@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class plainNet(torch.nn.Module):
+class PlainNet(torch.nn.Module):
     def __init__(self, n_inputs, hidden_sizes, n_outputs):
-        super(plainNet, self).__init__()
+        super().__init__()
 
         self.n_inputs = n_inputs
         self.hidden_sizes = hidden_sizes
@@ -29,8 +29,17 @@ class plainNet(torch.nn.Module):
 
         return x
 
-    def train_n_epochs(self, training_loader, n_epochs, lr = 0.001, verbose=False):
-        optimizer =  torch.optim.Adam(self.parameters(), lr=0.001)
+    def train_n_epochs(self,
+                        training_loader,
+                        n_epochs,
+                        lr = 0.001,
+                        loss_fn  = torch.nn.MSELoss(),
+                        optimizer = "Adam",
+                        verbose=False):
+        
+        if optimizer == "Adam":
+            optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+
         loss_fn = torch.nn.MSELoss()
 
         for epoch in range(n_epochs):
