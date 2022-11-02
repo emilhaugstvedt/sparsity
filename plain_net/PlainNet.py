@@ -2,21 +2,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class PlainNet(torch.nn.Module):
-    def __init__(self, n_inputs, hidden_sizes, n_outputs):
+class PlainNet(nn.Module):
+    def __init__(self, n_inputs, hidden_layers, n_outputs):
         super().__init__()
 
         self.n_inputs = n_inputs
-        self.hidden_sizes = hidden_sizes
+        self.hidden_sizes = hidden_layers
         self.n_outputs = n_outputs
 
-        self.input = nn.Linear(n_inputs, hidden_sizes[0][0])
+        self.input = nn.Linear(n_inputs, hidden_layers[0][0])
 
         self.layers = nn.ModuleList()
-        for layer in hidden_sizes:
+        for layer in hidden_layers:
             self.layers.append(nn.Linear(layer[0], layer[1]))
         
-        self.output = nn.Linear(hidden_sizes[-1][-1], n_outputs)
+        self.output = nn.Linear(hidden_layers[-1][-1], n_outputs)
 
     def forward(self, x):
     

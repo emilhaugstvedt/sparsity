@@ -13,6 +13,8 @@ class SoftThresholdLayer(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
 
+        self.n_weights = in_features * out_features
+
         weight = torch.Tensor(in_features, out_features)
         self.weight = nn.Parameter(weight)
         nn.init.normal_(self.weight)
@@ -29,16 +31,14 @@ class SoftThresholdLayer(nn.Module):
             nn.init.zeros_(self.s)
 
     def forward(self, x):
-
-        sparse_weight = sparse_function(
-            self.weight,
-            self.s
-        )
-
+        sparse_weight = sparse_function(self.weight, self.s)
         return torch.matmul(x, sparse_weight)
     
     def get_sparse_weights(self):
         return sparse_function(self.weight, self.s)
+
+    def get_sparsity(self):
+        return (1 - torch.count_nonzero(self.weight) / self.n_weights)
 
 
 class SoftThresholdNet(nn.Module):
@@ -61,13 +61,10 @@ class SoftThresholdNet(nn.Module):
         self.layers.append(output)
 
     def forward(self, x):
-
         for layer in self.layers[:-1]:
             x = F.relu(layer(x))
-    
-        x = self.layers[-1](x)
+        return self.layers[-1](x)
 
-        return x
 
     def train_n_epochs(self,
                     data_loader: torch.utils.data.DataLoader,
@@ -92,7 +89,8 @@ class SoftThresholdNet(nn.Module):
                 optimizer.step()
 
             if (epoch % 100 == 0) and verbose:
-                print('Epoch {}: loss {}'.format(epoch, loss.item()))
+                print(f'Epoch {epoch}: loss {loss.item()}')
+                print(f'Sparsity: {self.get_sparsity()} \n')
 
     def get_sparsity(self):
         
@@ -103,5 +101,5 @@ class SoftThresholdNet(nn.Module):
             non_zero_weights += torch.count_nonzero(layer.get_sparse_weights())
             total_weights += layer.in_features * layer.out_features
         
-        return (total_weights - non_zero_weights) / total_weights
+        return (1 - non_zero_weights / total_weights).item()
         
