@@ -3,34 +3,25 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PlainNet(nn.Module):
-    def __init__(self, n_inputs, hidden_layers, n_outputs):
+    def __init__(self, layers):
         super().__init__()
 
-        self.n_inputs = n_inputs
-        self.hidden_sizes = hidden_layers
-        self.n_outputs = n_outputs
+        self.n_inputs = layers[0]
+        self.n_outputs = layers[-1]
 
-        self.input = nn.Linear(n_inputs, hidden_layers[0][0])
 
         self.layers = nn.ModuleList()
-        for layer in hidden_layers:
-            self.layers.append(nn.Linear(layer[0], layer[1]))
+        for l in range(len(layers[:-1])):
+            self.layers.append(nn.Linear(in_features=layers[l], out_features=layers[l+1]))
         
-        self.output = nn.Linear(hidden_layers[-1][-1], n_outputs)
 
     def forward(self, x):
-    
-        x = F.relu(self.input(x))
-
-        for layer in self.layers:
-            x = F.relu(layer(x))
-    
-        x = self.output(x)
-
-        return x
+        for layer in self.layers[:-1]:
+            x = torch.relu(layer(x))
+        return self.layers[-1](x)
 
     def train_n_epochs(self,
-                        training_loader,
+                        train_loader,
                         n_epochs,
                         lr = 0.001,
                         loss_fn  = torch.nn.MSELoss(),
@@ -43,7 +34,7 @@ class PlainNet(nn.Module):
         loss_fn = torch.nn.MSELoss()
 
         for epoch in range(n_epochs):
-            for (x_batch, y_batch) in training_loader:
+            for (x_batch, y_batch) in train_loader:
                 optimizer.zero_grad()
                 y_pred = self.forward(x_batch)
                 loss = loss_fn(y_pred, y_batch)
