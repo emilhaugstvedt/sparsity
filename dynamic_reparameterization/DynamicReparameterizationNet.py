@@ -92,9 +92,7 @@ class DynamicReparameterizationNet(nn.Module):
         self.n_weights = sum([layer.n_weights for layer in self.layers])
 
     def forward(self, x):
-        # Skip connections?
-        x = torch.relu(self.layers[0](x))
-        for layer in self.layers[1:-1]:
+        for layer in self.layers[:-1]:
             x = torch.relu(layer(x))
         return self.layers[-1](x)
 
