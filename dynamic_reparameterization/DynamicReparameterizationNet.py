@@ -7,31 +7,44 @@ class DynamicReparameterizationLayer(nn.Module):
         
         self.n_weights = n_input * n_output 
 
+        self.sparsity = sparsity
+
         weight = torch.Tensor(n_input, n_output)
         self.weight = nn.Parameter(weight)
-        nn.init.sparse_(self.weight, sparsity=sparsity) # Legge til std-parameter?
+        # Custom sparsity initialization
+        nn.init.zeros_(self.weight)
+        with torch.no_grad():
+            for _ in range(int(self.n_weights * (1-self.sparsity))):
+                indices = (self.weight == 0).nonzero() 
+                random_index = indices[torch.randint(0, len(indices), (1,))][0]
+                self.weight[random_index[0]][random_index[1]] = torch.rand(1)
 
         self.m = self.get_number_of_nonzero_weights() # Store number of nonzero weights in layer
 
         self.r = 0 # Store number of zero weights in layer
         self.k = 0 # Number of pruned weights in last pruning step
+            
 
     def forward(self, x):
         return torch.matmul(x, self.weight)
         
 
     def prune(self, H) -> int:
-        k = len((abs(self.weight) < H).nonzero())
-        self.weight = nn.Parameter(torch.where(abs(self.weight) < H, 0, self.weight))
-
+        #print("Before pruning: ", self.get_number_of_nonzero_weights().item())
+        k = torch.mul((self.weight < H), (self.weight != 0)).count_nonzero()
+        with torch.no_grad():
+            self.weight = nn.Parameter(torch.where(((self.weight.abs() < H) & (self.weight != torch.tensor(0))), 0, self.weight))
         self.k = k
         r = self.m - k
         self.r = r
 
-        return k, r
+        return self.k, self.r
     
     def grow(self, K, R):
-        g = int((self.r / R) * K)
+        if R != 0:
+            g = int((self.r / R) * K)
+        else:
+            g = self.k
 
         with torch.no_grad():
             for _ in range(g):
@@ -39,23 +52,26 @@ class DynamicReparameterizationLayer(nn.Module):
                 if len(zero_indices) == 0:
                     break
                 random_index = zero_indices[torch.randint(0, len(zero_indices), (1,))][0]
-                self.weight[random_index[0]][random_index[1]] = torch.normal(mean=0, std=0.01, size=(1,))
-
+                self.weight[random_index[0]][random_index[1]] = torch.rand(1)
         self.m = self.get_number_of_nonzero_weights()
         
+        return g
+
     def get_number_of_nonzero_weights(self) -> int:
         return torch.count_nonzero(self.weight)
 
     def get_sparsity(self):
-        return (1 - self.m / self.n_weights)
+        return (1 - (self.weight.count_nonzero() / self.n_weights))
 
 class DynamicReparameterizationNet(nn.Module):
-    def __init__(self, n_inputs, hidden_layers, n_outputs, H, sparsity, Np, fractional_tolerence):
+    def __init__(self, layers, H, sparsity, Np, fractional_tolerence, verbose=False) -> None:
         super().__init__()
 
-        self.n_inputs = n_inputs
-        self.hidden_sizes = hidden_layers
-        self.n_outputs = n_outputs
+        self.verbose = verbose
+
+        self.n_inputs = layers[0]
+        self.hidden_sizes = len(layers) - 2
+        self.n_outputs = layers[-1]
 
         # Percentage of weights that should be 0
         self.sparsity = sparsity
@@ -68,10 +84,8 @@ class DynamicReparameterizationNet(nn.Module):
         self.Np = Np
 
         self.layers = nn.ModuleList()
-        self.layers.append(DynamicReparameterizationLayer(n_input=n_inputs, n_output=hidden_layers[0][0], sparsity=sparsity))
-        for layer in hidden_layers:
-            self.layers.append(DynamicReparameterizationLayer(n_input=layer[0], n_output=layer[1], sparsity=sparsity))
-        self.layers.append(DynamicReparameterizationLayer(n_input=hidden_layers[-1][1], n_output=n_outputs, sparsity=sparsity))
+        for l in range(len(layers[:-1])):
+            self.layers.append(DynamicReparameterizationLayer(n_input=layers[l], n_output=layers[l+1], sparsity=sparsity))
 
         # Number of nonzero weights in the network
         self.M = sum([layer.get_number_of_nonzero_weights() for layer in self.layers])
@@ -79,39 +93,49 @@ class DynamicReparameterizationNet(nn.Module):
         self.n_weights = sum([layer.n_weights for layer in self.layers])
 
     def forward(self, x):
-        for layer in self.layers[:-1]:
+        # Skip connections?
+        x = torch.relu(self.layers[0](x))
+        for layer in self.layers[1:-1]:
             x = torch.relu(layer(x))
         return self.layers[-1](x)
 
     def reallocate(self):
-        #print("Reallocation starting, current sparsity: ", self.get_sparsity())
-        K , M = self.prune(self.H)
-        #print("Pruning done, pruned ", K, " weights")
+
+        K , R = self.prune(self.H)
+        if self.verbose:
+            print(f"Pruned {K.item()} weights")
+
         self.adjust_H(K, self.Np)
-        #print(f"H adjusted to {self.H}")
-        #print(K)
-        self.grow(K, M)
-        #print("Reallocation done, new sparsity: ", self.get_sparsity())
+
+        G = self.grow(K, R)
+        
+        if self.verbose:
+            print(f"Grew {G} weights")
+
         self.M = sum([layer.get_number_of_nonzero_weights() for layer in self.layers])
-        #print(sum([layer.n_weights for layer in self.layers]))
 
     def adjust_H(self, K, Np) -> None:
-        if K < (1 - self.fractional_tolerance) * Np:
+        if K < (1 - self.fractional_tolerance) * Np :
             self.H = 2 * self.H
             return
         elif K > (1 + self.fractional_tolerance) * Np:
             self.H = 1/2 * self.H
             return
+        #else:
+            #self.H = 2/3 * self.H
         return
 
     def grow(self, K, R):
+        G = 0
         for layer in self.layers:
-            layer.grow(K, R)
+            g = layer.grow(K, R)
+            G += g
+        return G
 
     def prune(self, H):
         K = R = 0
         for layer in self.layers:
-            k, r = layer.prune(self.H)
+            k, r = layer.prune(H)
             K += k
             R += r
         return K, R
@@ -145,8 +169,13 @@ class DynamicReparameterizationNet(nn.Module):
                 y_pred = self(x)
                 loss = criterion(y_pred, y)
                 loss.backward()
+                
+                for layer in self.layers:
+                    grad_mask = (layer.weight != 0)
+                    layer.weight.grad = torch.where(grad_mask, layer.weight.grad, torch.tensor(0.0))
+
                 optimizer.step()
-            
+                        
             if epoch % 100 == 0:
                 print(f"Epoch {epoch}: {loss.item()}")
                 print(f"Sparsity: {self.get_sparsity()} \n")
@@ -155,7 +184,7 @@ class DynamicReparameterizationNet(nn.Module):
                 self.reallocate()
 
     def get_sparsity(self) -> int:
-        return (1.0 - self.M/self.n_weights).detach().numpy()
+        return 1.0 - (torch.tensor([layer.get_number_of_nonzero_weights() for layer in self.layers]).sum()/self.n_weights).detach().numpy()
 
     def get_layerwise_sparsity(self):
         return [layer.get_sparsity() for layer in self.layers]
