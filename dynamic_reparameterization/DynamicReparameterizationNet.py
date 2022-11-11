@@ -30,7 +30,6 @@ class DynamicReparameterizationLayer(nn.Module):
         
 
     def prune(self, H) -> int:
-        #print("Before pruning: ", self.get_number_of_nonzero_weights().item())
         k = torch.mul((self.weight < H), (self.weight != 0)).count_nonzero()
         with torch.no_grad():
             self.weight = nn.Parameter(torch.where(((self.weight.abs() < H) & (self.weight != torch.tensor(0))), 0, self.weight))
@@ -106,6 +105,9 @@ class DynamicReparameterizationNet(nn.Module):
             print(f"Pruned {K.item()} weights")
 
         self.adjust_H(K, self.Np)
+        
+        if self.verbose:
+            print(f"Adjusted H to {self.H}")
 
         G = self.grow(K, R)
         
@@ -169,7 +171,8 @@ class DynamicReparameterizationNet(nn.Module):
                 y_pred = self(x)
                 loss = criterion(y_pred, y)
                 loss.backward()
-                
+
+                # Mask the gradients to make sure the weights that are 0 stay 0
                 for layer in self.layers:
                     grad_mask = (layer.weight != 0)
                     layer.weight.grad = torch.where(grad_mask, layer.weight.grad, torch.tensor(0.0))
@@ -180,8 +183,9 @@ class DynamicReparameterizationNet(nn.Module):
                 print(f"Epoch {epoch}: {loss.item()}")
                 print(f"Sparsity: {self.get_sparsity()} \n")
             
-            if epoch % epochs_reallocate == 0 and epoch != 0:
-                self.reallocate()
+            if epochs_reallocate != 0:
+                if epoch % epochs_reallocate == 0 and epoch != 0:
+                    self.reallocate()
 
     def get_sparsity(self) -> int:
         return 1.0 - (torch.tensor([layer.get_number_of_nonzero_weights() for layer in self.layers]).sum()/self.n_weights).detach().numpy()
