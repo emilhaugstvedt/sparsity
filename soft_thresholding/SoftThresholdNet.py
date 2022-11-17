@@ -19,9 +19,6 @@ class SoftThresholdLayer(nn.Module):
         self.weight = nn.Parameter(weight)
         nn.init.normal_(self.weight)
 
-        # S kan endres til å være global
-        # Kan også ha en s for hver vekt
-
         s = torch.Tensor(1, 1)
         self.s = nn.Parameter(s)
 
@@ -38,27 +35,20 @@ class SoftThresholdLayer(nn.Module):
         return sparse_function(self.weight, self.s)
 
     def get_sparsity(self):
-        return (1 - torch.count_nonzero(self.weight) / self.n_weights)
+        sparse_weight = sparse_function(self.weight, self.s)
+        return (1 - torch.count_nonzero(sparse_weight) / self.n_weights)
 
 
 class SoftThresholdNet(nn.Module):
-    def __init__(self, n_inputs, hidden_sizes, n_outputs, s_init=None):
+    def __init__(self, layers, s_init=None):
         super().__init__()
 
-        self.n_inputs = n_inputs
-        self.hidden_sizes = hidden_sizes
-        self.n_outputs = n_outputs
+        self.n_inputs = layers[0]
+        self.n_outputs = layers[-1]
 
         self.layers = nn.ModuleList()
-        
-        input = SoftThresholdLayer(n_inputs, hidden_sizes[0][0], s_init=s_init)
-        self.layers.append(input)
-
-        for layer in hidden_sizes:
-            self.layers.append(SoftThresholdLayer(layer[0], layer[1], s_init=s_init))
-
-        output = SoftThresholdLayer(hidden_sizes[-1][-1], n_outputs, s_init=s_init)
-        self.layers.append(output)
+        for l in range(len(layers[:-1])):
+            self.layers.append(SoftThresholdLayer(layers[l], layers[l+1], s_init=s_init))
 
     def forward(self, x):
         for layer in self.layers[:-1]:

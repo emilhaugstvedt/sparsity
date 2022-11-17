@@ -9,7 +9,6 @@ class PlainNet(nn.Module):
         self.n_inputs = layers[0]
         self.n_outputs = layers[-1]
 
-
         self.layers = nn.ModuleList()
         for l in range(len(layers[:-1])):
             self.layers.append(nn.Linear(in_features=layers[l], out_features=layers[l+1]))
@@ -43,4 +42,3 @@ class PlainNet(nn.Module):
 
             if (epoch % 100 == 0) and verbose:
                 print('Epoch {}: loss {}'.format(epoch, loss.item()))
-

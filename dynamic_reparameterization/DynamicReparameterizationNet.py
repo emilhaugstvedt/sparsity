@@ -53,6 +53,19 @@ class DynamicReparameterizationLayer(nn.Module):
                 random_index = zero_indices[torch.randint(0, len(zero_indices), (1,))][0]
                 self.weight[random_index[0]][random_index[1]] = torch.rand(1)
         self.m = self.get_number_of_nonzero_weights()
+
+        if self.get_sparsity() == 1.0:
+            print("Layer is fully sparse")
+            g = int(self.n_weights - self.n_weights * self.sparsity)
+            with torch.no_grad():
+                for _ in range(g):
+                    zero_indices = (self.weight == 0).nonzero()
+                    if len(zero_indices) == 0:
+                        break
+                    random_index = zero_indices[torch.randint(0, len(zero_indices), (1,))][0]
+                    self.weight[random_index[0]][random_index[1]] = torch.rand(1)
+    
+            self.m = self.get_number_of_nonzero_weights()
         
         return g
 
@@ -97,7 +110,6 @@ class DynamicReparameterizationNet(nn.Module):
         return self.layers[-1](x)
 
     def reallocate(self):
-
         K , R = self.prune(self.H)
         if self.verbose:
             print(f"Pruned {K.item()} weights")
@@ -106,6 +118,11 @@ class DynamicReparameterizationNet(nn.Module):
         
         if self.verbose:
             print(f"Adjusted H to {self.H}")
+
+        if self.get_sparsity() * 0.9 < self.sparsity:
+            K = K * 0.9
+        if self.get_sparsity() * 1.1 > self.sparsity:
+            K = K * 1.1
 
         G = self.grow(K, R)
         
@@ -164,10 +181,10 @@ class DynamicReparameterizationNet(nn.Module):
             return
 
         for epoch in range(n_epochs):
-            for x, y in train_loader:
+            for x_batch, y_batch in train_loader:
                 optimizer.zero_grad()
-                y_pred = self(x)
-                loss = criterion(y_pred, y)
+                y_pred = self(x_batch)
+                loss = criterion(y_pred, y_batch)
                 loss.backward()
 
                 # Mask the gradients to make sure the weights that are 0 stay 0
