@@ -6,23 +6,14 @@ class Dataset_duffing(Dataset):
     def __init__(self, data,delta_time):
         self.timesteps = 1
         self.DT = delta_time
-
         self.x, self.x_mean, self.x_std = self.organize_features(data)
-
         self.y, self.y_mean, self.y_std, self.y_non_norm = self.organize_target(data)
-
         self.x_non_norm = torch.flatten(data,start_dim=0, end_dim=1)
-
         self.n_samples = self.x.shape[0]
 
-
-
     def __getitem__(self,index):
-
         X = self.x[index]
-
         Y = self.y[index]
-
         return X, Y
 
     def __len__(self):
@@ -48,6 +39,7 @@ class Dataset_duffing(Dataset):
 
 
     def organize_target(self, data):
+        """Orginize target data for training by computing derivatives and normalizing them"""
         #Standard normalize output: (y- mean(y))/std(y)
 
         t_steps = data.shape[1]
