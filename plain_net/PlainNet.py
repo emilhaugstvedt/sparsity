@@ -42,3 +42,11 @@ class PlainNet(nn.Module):
 
             if (epoch % 100 == 0) and verbose:
                 print('Epoch {}: loss {}'.format(epoch, loss.item()))
+
+    def get_sparsity(self):
+        total_nonzero = 0
+        total_n_weights = 0
+        for layer in self.layers:
+            total_nonzero = layer.weight.count_nonzero()
+            total_n_weights = layer.weight.numel()
+        return 1 - total_nonzero / total_n_weights

@@ -1,10 +1,14 @@
 import torch
+import sys
+
+sys.path.append("../")
 
 from plain_net.PlainNet import PlainNet
 
 class L1RegularizationNet(PlainNet):
-    def __init__(self, layers):
+    def __init__(self, layers, l1):
         super().__init__(layers)
+        self.l1 = l1
 
     def L1_loss(self):
         loss = 0

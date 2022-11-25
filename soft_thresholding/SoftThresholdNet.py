@@ -1,4 +1,3 @@
-from tkinter.messagebox import NO
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -57,7 +56,8 @@ class SoftThresholdNet(nn.Module):
 
 
     def train_n_epochs(self,
-                    data_loader: torch.utils.data.DataLoader,
+                    train_loader: torch.utils.data.DataLoader,
+                    val_loader: torch.utils.data.DataLoader,
                     n_epochs: int,
                     lr = 0.001,
                     weight_decay=0,
@@ -71,16 +71,25 @@ class SoftThresholdNet(nn.Module):
         loss_fn = torch.nn.MSELoss()
 
         for epoch in range(n_epochs):
-            for (x_batch, y_batch) in data_loader:
+            for (x_batch, y_batch) in train_loader:
+                self.train()
                 optimizer.zero_grad()
                 y_pred = self.forward(x_batch)
                 loss = loss_fn(y_pred, y_batch)
                 loss.backward()
                 optimizer.step()
 
-            if (epoch % 100 == 0) and verbose:
-                print(f'Epoch {epoch}: loss {loss.item()}')
-                print(f'Sparsity: {self.get_sparsity()} \n')
+            if (epoch % 10 == 0) and verbose:
+                self.eval()
+                with torch.no_grad():
+                    for (x_val, y_val) in val_loader:
+                        y_pred_val = self.forward(x_val)
+                        val_loss = loss_fn(y_pred_val, y_val)
+                        break
+                print(f"Epoch {epoch}")
+                print(f"Train loss: {loss}")
+                print(f"Validation loss: {val_loss}")
+                print(f"Sparsity: {self.get_sparsity()} \n")
 
     def get_sparsity(self):
         

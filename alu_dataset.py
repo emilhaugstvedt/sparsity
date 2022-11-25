@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 
 class Dataset_alu(Dataset):
     
-    def __init__(self, data,delta_time):
+    def __init__(self, data, delta_time):
         self.timesteps = 1
         self.DT = delta_time
         
@@ -16,7 +16,7 @@ class Dataset_alu(Dataset):
         self.n_samples = self.x.shape[0]
         
         
-    def __getitem__(self,index):
+    def __getitem__(self, index):
         
         X = self.x[index]
         

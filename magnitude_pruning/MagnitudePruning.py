@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 class MagnitudePruningNet(nn.Module):
     def __init__(self, layers):
@@ -37,22 +38,25 @@ class MagnitudePruningNet(nn.Module):
             weights = weights.reshape(-1)
             weights = torch.abs(weights)
             weights = torch.sort(weights)[0]
-            threshold = weights[int(len(weights) * sparsity)]
+            threshold = weights[int((len(weights) + (weights == 0).count_nonzero()) * sparsity)]
             thresholds.append(threshold)
         return thresholds
             
 
-    def train_n_epochs(self, train_loader,
+    def train_n_epochs(self, 
+                        train_loader,
+                        val_loader,
                         n_epochs, 
                         pruning_epoch=None, 
                         sparsity=None,
                         lr = 0.001,
+                        weight_decay = 0.0,
                         loss_fn  = torch.nn.MSELoss(),
                         optimizer = "Adam",
                         verbose=False):
 
         if optimizer == "Adam":
-            optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+            optimizer = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
 
         loss_fn = torch.nn.MSELoss()
 
@@ -67,16 +71,24 @@ class MagnitudePruningNet(nn.Module):
                     loss = loss_fn(y_pred, y_batch)
                     loss.backward()
                     optimizer.step()
+                
+                with torch.no_grad():
+                    for (x_batch, y_batch) in val_loader:
+                        y_pred = self.forward(x_batch)
+                        val_loss = loss_fn(y_pred, y_batch)
+                        break
 
-                if (epoch % 100 == 0) and verbose:
-                    print('Epoch {}: loss {}'.format(epoch, loss.item()))
+                if (epoch % 10 == 0) and verbose:
+                    print(f'Epoch {epoch}')
+                    print(f'Training loss {loss.item()}')
+                    print(f'Validation loss: {val_loss.item()}')
 
             # Prune
             thresholds = self.get_weight_thresholds(sparsity)
             self.prune(thresholds)
 
             if verbose:
-                print(f"Pruned. Sparsity is now {self.get_sparsity().round(3)}")
+                print(f"Pruned. Sparsity is now {self.get_sparsity()}")
         else:
             pruning_epoch = 0
         
@@ -95,8 +107,16 @@ class MagnitudePruningNet(nn.Module):
 
                 optimizer.step()
 
-            if (epoch % 100 == 0) and verbose:
-                print('Epoch {}: loss {}'.format(epoch, loss.item()))
+            with torch.no_grad():
+                for (x_batch, y_batch) in val_loader:
+                    y_pred = self.forward(x_batch)
+                    val_loss = loss_fn(y_pred, y_batch)
+                    break
+
+            if (epoch % 10 == 0) and verbose:
+                print(f'Epoch {epoch}')
+                print(f'Training loss {loss.item()}')
+                print(f'Validation loss: {val_loss.item()}')
 
             
 
