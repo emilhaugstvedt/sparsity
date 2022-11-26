@@ -26,7 +26,7 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
 ### Hyperparamters ###
 n_epochs = 100
-lr = 0.01
+lr = 0.001
 weight_decay = 0.0001 # L2 regulizer parameter for optimizer
 s_init = 1 # initial value for threshold parameter
 n_models = 10
@@ -34,7 +34,7 @@ n_models = 10
 #### Create model ####
 input_size = train_data.x.shape[1]
 output_size = train_data.y.shape[1]
-layers = [input_size, 64, 64, 64, output_size]
+layers = [input_size, 25, 25, 25, output_size]
 
 for n in range(n_models):
     model = SoftThresholdNet(layers=layers, s_init=s_init)
@@ -67,4 +67,4 @@ for n in range(n_models):
                 print(f"Validation loss: {val_loss}")
                 print(f"Sparsity: {model.get_sparsity()} \n")
 
-    torch.save(model.state_dict(), f"../models/{dataset}/soft_thresholding/model_{n+1}.pickle")
+    torch.save(model.state_dict(), f"../models/{dataset}/soft_thresholding/model_{n+1}_sparsity.pickle")
