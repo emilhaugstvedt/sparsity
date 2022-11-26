@@ -14,6 +14,9 @@ class MagnitudePruningNet(nn.Module):
         self.layers = nn.ModuleList()
         for l in range(len(layers[:-1])):
             self.layers.append(nn.Linear(in_features=layers[l], out_features=layers[l+1]))
+            self.layers[l].weight.data.normal_()
+
+        self.pruning_shedule = None
         
 
     def forward(self, x):
@@ -41,8 +44,7 @@ class MagnitudePruningNet(nn.Module):
             threshold = weights[int((len(weights) + (weights == 0).count_nonzero()) * sparsity)]
             thresholds.append(threshold)
         return thresholds
-            
-
+        
     def train_n_epochs(self, 
                         train_loader,
                         val_loader,
@@ -125,3 +127,6 @@ class MagnitudePruningNet(nn.Module):
 
     def get_layerwise_sparsity(self):
         return [(1 - (layer.weight.count_nonzero()/(layer.weight.shape[0]  * layer.weight.shape[1]))).detach().numpy() for layer in self.layers]
+
+    def l1_loss(self):
+        return sum([layer.weight.abs().sum() for layer in self.layers])

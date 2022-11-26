@@ -7,12 +7,11 @@ sys.path.append("../")
 
 import neptune.new as neptune
 
-from L1RegularizationNet import L1RegularizationNet
+from L1_regularization.L1RegularizationNet import L1RegularizationNet
 
 from utils import load_data
 
 # Load data
-
 dataset = "alu" # alu or duffing
 
 with open(f"../data/{dataset}/train.pickle", "rb") as f:
@@ -30,12 +29,11 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
 ### Hyperparameters ###
 n_epochs = 100
-lr = 0.01
+lr = 1e-3
 weight_decay = 0 # L2 regulizer parameter for optimizer
-l1 = 0.0005
+l1 = 1e-4
 
 n_models = 10
-
 #### Create model ####
 input_size = train_loader.dataset.x.shape[1]
 output_size = train_loader.dataset.y.shape[1]
@@ -44,7 +42,7 @@ layers = [input_size, 64, 64, 64, output_size]
 
 for n in range(n_models):
 
-    model = L1RegularizationNet(layers=layers, l1=l1)
+    model = L1RegularizationNet(layers=layers)
 
     ### Train model ###            
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -55,7 +53,7 @@ for n in range(n_models):
             model.train()
             optimizer.zero_grad()
             y_pred = model.forward(x_batch)
-            loss = criterion(y_pred, y_batch)
+            loss = criterion(y_pred, y_batch) + l1 * model.L1_loss()
             loss.backward()
             optimizer.step()
 
@@ -74,4 +72,4 @@ for n in range(n_models):
                 print(f"Validation loss: {val_loss}")
                 print(f"Sparsity: {model.get_sparsity()} \n")
 
-    torch.save(model.state_dict(), f"../models/{dataset}/L1_regularization/model_{n+1}.pickle")
+    torch.save(model, f"../models/{dataset}/L1_regularization/model_{n+1}.pickle")

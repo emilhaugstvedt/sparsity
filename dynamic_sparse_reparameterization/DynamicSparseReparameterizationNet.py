@@ -213,3 +213,6 @@ class DynamicSparseReparameterizationNet(nn.Module):
 
     def get_number_of_nonzero_weights(self) -> int:
         return sum([layer.get_number_of_nonzero_weights() for layer in self.layers])
+    
+    def l1_loss(self):
+        return sum([layer.weight.abs().sum() for layer in self.layers])

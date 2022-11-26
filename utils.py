@@ -21,9 +21,9 @@ def load_data(path, batch_size=100) -> DataLoader:
 def rolling_forecast(x_dot_pred, dt):
     pass
 
-def load_models(model, path, n_models):
+def load_models(path: str, n_models):
     models = []
     for n in range(n_models):
-        model.load_state_dict(torch.load(f"{path}/model_{n}.pt"))
+        model = torch.load(f"{path}_{n+1}.pickle")
         models.append(model)
     return models

@@ -26,10 +26,10 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
 ### Hyperparamters ###
 n_epochs = 100
-lr = 0.01
+lr = 1e-3
 weight_decay = 0.0001 # L2 regulizer parameter for optimizer
-pruning_schedule = {"epoch": [25, 50, 75], "sparsity": [0.5, 0.5, 0.5]}
-sparsity = 0.75
+pruning_schedule = {"epoch": [25, 50], "sparsity": [0.5, 0.5]}
+l1 = 1e-4
 
 n_models = 10
 
@@ -40,6 +40,7 @@ layers = [input_size, 64, 64, 64, output_size]
 
 for n in range(n_models):
     model = MagnitudePruningNet(layers=layers)
+    model.pruning_shedule = pruning_schedule
 
     ### Train model ###            
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -51,7 +52,7 @@ for n in range(n_models):
         for (x_batch, y_batch) in train_loader:
             optimizer.zero_grad()
             y_pred = model.forward(x_batch)
-            loss = criterion(y_pred, y_batch)
+            loss = criterion(y_pred, y_batch) + l1 * model.l1_loss()
             loss.backward()
         
             for layer in model.layers:
@@ -77,5 +78,7 @@ for n in range(n_models):
             print(f'Validation loss: {val_loss.item()}')
             print(f"Sparsity: {model.get_sparsity()}\n")
 
-
-    torch.save(model.state_dict(), f"../models/{dataset}/magnitude_pruning/model_{n+1}.pickle")
+    if l1 == 0:
+        torch.save(model, f"../models/{dataset}/magnitude_pruning/model_{model.get_sparsity()}_{n+1}.pickle")
+    else:
+        torch.save(model, f"../models/{dataset}/magnitude_pruning/model_{model.get_sparsity()}_l1_{l1}_{n+1}.pickle")

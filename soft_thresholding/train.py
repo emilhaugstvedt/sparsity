@@ -25,22 +25,24 @@ test_loader = dataloader.DataLoader(test_data, batch_size=100, shuffle=True)
 val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
 ### Hyperparamters ###
-n_epochs = 100
-lr = 0.001
-weight_decay = 0.0001 # L2 regulizer parameter for optimizer
+n_epochs = 50
+lr = 1e-3
+l2 = 0 # L2 regulizer parameter for optimizer
+l1 = 1e-4
 s_init = 1 # initial value for threshold parameter
 n_models = 10
 
 #### Create model ####
 input_size = train_data.x.shape[1]
 output_size = train_data.y.shape[1]
-layers = [input_size, 25, 25, 25, output_size]
+layers = [input_size, 64, 64, 64, output_size]
 
 for n in range(n_models):
     model = SoftThresholdNet(layers=layers, s_init=s_init)
+    model.l1 = l1
 
     ### Train model ###            
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=l2)
     criterion = torch.nn.MSELoss()
 
     for epoch in range(n_epochs):
@@ -48,7 +50,7 @@ for n in range(n_models):
             model.train()
             optimizer.zero_grad()
             y_pred = model.forward(x_batch)
-            loss = criterion(y_pred, y_batch)
+            loss = criterion(y_pred, y_batch) + l1 * model.l1_loss()
             loss.backward()
             optimizer.step()
 
@@ -67,4 +69,7 @@ for n in range(n_models):
                 print(f"Validation loss: {val_loss}")
                 print(f"Sparsity: {model.get_sparsity()} \n")
 
-    torch.save(model.state_dict(), f"../models/{dataset}/soft_thresholding/model_{n+1}_sparsity.pickle")
+    if l1 == 0:
+        torch.save(model, f"../models/{dataset}/soft_thresholding/model_{n+1}.pickle")
+    else:
+        torch.save(model, f"../models/{dataset}/soft_thresholding/model_l1_{l1}_{n+1}.pickle")

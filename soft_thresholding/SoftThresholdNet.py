@@ -9,6 +9,8 @@ class SoftThresholdLayer(nn.Module):
     def __init__(self, in_features, out_features, s_init=None):
         super().__init__()
 
+        self.l1 = None
+
         self.in_features = in_features
         self.out_features = out_features
 
@@ -92,7 +94,6 @@ class SoftThresholdNet(nn.Module):
                 print(f"Sparsity: {self.get_sparsity()} \n")
 
     def get_sparsity(self):
-        
         non_zero_weights = 0
         total_weights = 0
 
@@ -101,4 +102,7 @@ class SoftThresholdNet(nn.Module):
             total_weights += layer.in_features * layer.out_features
         
         return (1 - non_zero_weights / total_weights).item()
+    
+    def l1_loss(self):
+        return sum([layer.weight.abs().sum() for layer in self.layers])
         
