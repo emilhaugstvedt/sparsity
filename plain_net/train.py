@@ -33,12 +33,12 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 n_epochs = 100
 lr = 1e-3
 
-n_models = 10
+n_models = 20
 #### Create model ####
 input_size = train_loader.dataset.x.shape[1]
 output_size = train_loader.dataset.y.shape[1]
 
-layers = [input_size, 64, 64, 64, 64, output_size]
+layers = [input_size, 25, 25, 25, 25, output_size]
 
 for n in range(n_models):
 
@@ -62,7 +62,7 @@ for n in range(n_models):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.9)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=40, gamma=0.1)
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.L1Loss()
 
     for epoch in tqdm(range(n_epochs)):
         for (x_batch, y_batch) in train_loader:
@@ -84,7 +84,8 @@ for n in range(n_models):
         # Log train loss, validation loss and sparsity
 
         #if (epoch % 10 == 0):
-        #        print(f"Epoch {epoch}")
+        #
+        #         print(f"Epoch {epoch}")
         #        print(f"Train loss: {loss}")
         #        print(f"Validation loss: {val_loss}")
         #        print(f"Sparsity: {model.get_sparsity()} \n")

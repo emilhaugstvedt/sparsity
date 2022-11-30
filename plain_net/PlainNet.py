@@ -12,7 +12,7 @@ class PlainNet(nn.Module):
         self.layers = nn.ModuleList()
         for l in range(len(layers[:-1])):
             self.layers.append(nn.Linear(in_features=layers[l], out_features=layers[l+1]))
-            self.layers[l].weight.data.normal_()
+            self.layers[l].weight.data.normal_(mean=0, std=0.5)
         
 
     def forward(self, x):
