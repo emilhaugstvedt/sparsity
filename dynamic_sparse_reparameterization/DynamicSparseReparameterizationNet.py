@@ -13,11 +13,12 @@ class DynamicSparseReparameterizationLayer(nn.Module):
         self.weight = nn.Parameter(weight)
         # Custom sparsity initialization
         nn.init.zeros_(self.weight)
+        kaming_weights = nn.init.kaiming_normal(torch.Tensor(self.weight.shape))
         with torch.no_grad():
             for _ in range(int(self.n_weights * (1-self.sparsity))):
                 indices = (self.weight == 0).nonzero() 
                 random_index = indices[torch.randint(0, len(indices), (1,))][0]
-                self.weight[random_index[0]][random_index[1]] = torch.rand(1)
+                self.weight[random_index[0]][random_index[1]] = kaming_weights[random_index[0]][random_index[1]]
 
         self.m = self.get_number_of_nonzero_weights() # Store number of nonzero weights in layer
 
@@ -39,19 +40,20 @@ class DynamicSparseReparameterizationLayer(nn.Module):
 
         return self.k, self.r
     
-    def grow(self, K, R):
+    def grow(self, K, R, H):
         if R != 0:
             g = int((self.r / R) * K)
         else:
             g = self.k
 
+        kaming_weights = nn.init.kaiming_normal(torch.Tensor(self.weight.shape))
         with torch.no_grad():
             for _ in range(g):
                 zero_indices = (self.weight == 0).nonzero()
                 if len(zero_indices) == 0:
                     break
                 random_index = zero_indices[torch.randint(0, len(zero_indices), (1,))][0]
-                self.weight[random_index[0]][random_index[1]] = torch.rand(1)
+                self.weight[random_index[0]][random_index[1]] = kaming_weights[random_index[0]][random_index[1]]
         self.m = self.get_number_of_nonzero_weights()
 
         if self.get_sparsity() == 1.0:
@@ -125,7 +127,7 @@ class DynamicSparseReparameterizationNet(nn.Module):
         #if self.get_sparsity() * 1.1 > self.sparsity:
         #    K = K * 1.1
 
-        G = self.grow(K, R)
+        G = self.grow(K, R, self.H)
         
         if self.verbose:
             print(f"Grew {G} weights")
@@ -145,10 +147,10 @@ class DynamicSparseReparameterizationNet(nn.Module):
             #self.H = 2/3 * self.H
         return
 
-    def grow(self, K, R):
+    def grow(self, K, R, H):
         G = 0
         for layer in self.layers:
-            g = layer.grow(K, R)
+            g = layer.grow(K, R, H)
             G += g
         return G
 

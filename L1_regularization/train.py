@@ -26,24 +26,23 @@ with open(f"../data/{dataset}/test.pickle", "rb") as f:
 with open(f"../data/{dataset}/val.pickle", "rb") as f:
     val_data = pickle.load(f)
 
-train_loader = dataloader.DataLoader(train_data, batch_size=100, shuffle=True)
+train_loader = dataloader.DataLoader(train_data, batch_size=50, shuffle=True)
 test_loader = dataloader.DataLoader(test_data, batch_size=100, shuffle=True)
 val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
 ### Hyperparameters ###
-n_epochs = 200
+n_epochs = 100
 lr = 1e-3
 weight_decay = 0 # L2 regulizer parameter for optimizer
-l1 = 1e-4
-early_stopping = 50
+l1 = 5e-4
+early_stopping = 30
 early_stopping_start_epoch = 30
 scheduler_step_size = 20
+scheduler_gamma = 0.1
 
-swa_start_epoch = 20
-ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged:\
-             0.2 * averaged_model_parameter + 0.8 * model_parameter
+swa_start_epoch = 10
 
-n_models = 20
+n_models = 10
 
 #### Create model ####
 input_size = train_loader.dataset.x.shape[1]
@@ -69,6 +68,9 @@ for n in range(n_models):
         "layers": layers
     }
 
+    ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged:\
+             0.2 * averaged_model_parameter + 0.8 * model_parameter
+
     model = L1RegularizationNet(layers=layers)
     swa_model = torch.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg)
 
@@ -84,7 +86,9 @@ for n in range(n_models):
     ### Train model ###            
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.9)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=scheduler_step_size, gamma=0.1) # Endre med gamm 0.1 etter 50 epochs
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=scheduler_step_size, gamma=scheduler_gamma) # Endre med gamm 0.1 etter 50 epochs
+    #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer=optimizer, base_lr=1e-5, max_lr=lr*100, step_size_up=20, cycle_momentum=False)
+    #swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="cos", anneal_epochs=10, swa_lr=0.0, 0.001)
     criterion = torch.nn.MSELoss()
 
     for epoch in tqdm(range(n_epochs)):
@@ -92,13 +96,14 @@ for n in range(n_models):
             model.train()
             optimizer.zero_grad()
             y_pred = model.forward(x_batch)
+            swa_train_loss = criterion(swa_model(x_batch), y_batch)
             train_loss = criterion(y_pred, y_batch)
-            loss = train_loss + l1 * model.L1_loss()
+            loss = train_loss + l1 * model.l1_loss()
             loss.backward()
             optimizer.step()
         scheduler.step()
 
-        if epoch >= swa_start_epoch:
+        if epoch > swa_start_epoch:
             swa_model.update_parameters(model)
 
         model.eval()
@@ -127,6 +132,7 @@ for n in range(n_models):
         run["validation/loss"].log(val_loss)
         if epoch >= swa_start_epoch: 
             run["validation/swa_loss"].log(swa_val_loss)
+            run["train/swa_loss"].log(swa_train_loss)
         run["sparsity"].log(model.get_sparsity())
         run["lr"].log(optimizer.param_groups[0]["lr"])
 

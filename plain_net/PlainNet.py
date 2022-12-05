@@ -12,7 +12,9 @@ class PlainNet(nn.Module):
         self.layers = nn.ModuleList()
         for l in range(len(layers[:-1])):
             self.layers.append(nn.Linear(in_features=layers[l], out_features=layers[l+1]))
-            self.layers[l].weight.data.normal_(mean=0, std=0.5)
+            weight = torch.Tensor(layers[l+1], layers[l])
+            self.layers[l].weight = nn.Parameter(weight)
+            nn.init.kaiming_normal_(self.layers[l].weight)
         
 
     def forward(self, x):

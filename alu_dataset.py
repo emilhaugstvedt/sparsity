@@ -6,6 +6,8 @@ class Dataset_alu(Dataset):
     def __init__(self, data, delta_time):
         self.timesteps = 1
         self.DT = delta_time
+
+        self.data = data
         
         self.x, self.x_mean, self.x_std = self.organize_features(data)
         

@@ -14,7 +14,9 @@ class MagnitudePruningNet(nn.Module):
         self.layers = nn.ModuleList()
         for l in range(len(layers[:-1])):
             self.layers.append(nn.Linear(in_features=layers[l], out_features=layers[l+1]))
-            self.layers[l].weight.data.normal_()
+            weight = torch.Tensor(layers[l+1], layers[l])
+            self.layers[l].weight = nn.Parameter(weight)
+            nn.init.kaiming_normal_(self.layers[l].weight)
 
         self.pruning_shedule = None
         
@@ -123,7 +125,7 @@ class MagnitudePruningNet(nn.Module):
             
 
     def get_sparsity(self):
-       return (1 - (torch.tensor([layer.weight.count_nonzero() for layer in self.layers]).sum()/self.n_weights)).detach().numpy()
+       return (1 - (torch.tensor([layer.weight.count_nonzero() for layer in self.layers]).sum()/self.n_weights)).detach()
 
     def get_layerwise_sparsity(self):
         return [(1 - (layer.weight.count_nonzero()/(layer.weight.shape[0]  * layer.weight.shape[1]))).detach().numpy() for layer in self.layers]

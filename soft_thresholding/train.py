@@ -26,7 +26,7 @@ with open(f"../data/{dataset}/test.pickle", "rb") as f:
 with open(f"../data/{dataset}/val.pickle", "rb") as f:
     val_data = pickle.load(f)
 
-train_loader = dataloader.DataLoader(train_data, batch_size=100, shuffle=True)
+train_loader = dataloader.DataLoader(train_data, batch_size=50, shuffle=True)
 test_loader = dataloader.DataLoader(test_data, batch_size=100, shuffle=True)
 val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
@@ -34,16 +34,18 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 n_epochs = 200
 lr = 1e-3
 weight_decay = 0 # L2 regulizer parameter for optimizer
-l1 = 0
+l1 = 1e-4
 early_stopping = 50
 early_stopping_start_epoch = 30
-scheduler_step_size = 20
+
+scheduler_step_size = 10
+scheduler_gamma = 0.1
 
 s_init = -2
 
-swa_start_epoch = 20
+swa_start_epoch = 10
 ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged:\
-             0.1 * averaged_model_parameter + 0.9 * model_parameter
+             0.1 * averaged_model_parameter + 0.9 * model_parameter 
 
 n_models = 10
 
@@ -86,7 +88,7 @@ for n in range(n_models):
     ### Train model ###            
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.9)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=scheduler_step_size, gamma=0.1) # Endre med gamm 0.1 etter 50 epochs
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=scheduler_step_size, gamma=scheduler_gamma)
     criterion = torch.nn.MSELoss()
 
     for epoch in tqdm(range(n_epochs)):
@@ -150,7 +152,14 @@ for n in range(n_models):
             best_swa_model = copy.deepcopy(swa_model)
 
     run.stop()
-    torch.save(model, f"../models/{dataset}/soft_thresholding/model_{n+1}.pickle")
-    torch.save(best_model, f"../models/{dataset}/soft_thresholding/best_model_{n+1}.pickle")
-    torch.save(swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/swa_model_{n+1}.pickle")
-    torch.save(best_swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/best_swa_model_{n+1}.pickle")
+    
+    if l1 != 0:
+        torch.save(model, f"../models/{dataset}/soft_thresholding/l1/model_{n+1}.pickle")
+        torch.save(best_model, f"../models/{dataset}/soft_thresholding/l1/best_model_{n+1}.pickle")
+        torch.save(swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/l1/swa_model_{n+1}.pickle")
+        torch.save(best_swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/l1/best_swa_model_{n+1}.pickle")
+    else: 
+        torch.save(model, f"../models/{dataset}/soft_thresholding/model_{n+1}.pickle")
+        torch.save(best_model, f"../models/{dataset}/soft_thresholding/best_model_{n+1}.pickle")
+        torch.save(swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/swa_model_{n+1}.pickle")
+        torch.save(best_swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/best_swa_model_{n+1}.pickle")

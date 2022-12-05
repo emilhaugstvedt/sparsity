@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
+import alu_dataset
 
 def load_data(path, batch_size=100) -> DataLoader:
     with open(f"{path}/train.pickle", "rb") as f:
@@ -68,3 +69,49 @@ class MulticolorPatchHandler(object):
 
         handlebox.add_artist(patch)
         return patch
+
+
+def predict(model, x_test, dt, x_mean, x_std, y_mean, y_std):
+    prediction = torch.zeros_like(x_test)
+    prediction[:, 8:] = x_test[:, 8:]
+    prediction[0] = x_test[0]
+    for i in range(1,len(x_test)):
+        input = (prediction[i-1] - x_mean) / x_std
+        x_dot = model(input) * y_std + y_mean
+        prediction[i, :8] = prediction[i-1, :8] + x_dot * dt
+    return prediction
+
+def divergence_detection(model, test_data: alu_dataset.Dataset_alu, start=0, end=None):
+    # Get mean and std from test
+    dt = test_data.DT
+    x_mean = test_data.x_mean
+    x_std = test_data.x_std
+    y_mean = test_data.y_mean
+    y_std = test_data.y_std
+
+    if end == None:
+        end = len(test_data.data[0])
+
+    RFMSE_list = []
+
+    n_divergence = 0
+    for x_test in test_data.data: 
+        x_test = x_test[start:end]
+        prediction = torch.zeros_like(x_test)
+        prediction[:, 8:] = x_test[:, 8:]
+        prediction[0] = x_test[0]
+
+        for i in range(1,len(x_test)):
+            input = (prediction[i-1] - x_mean) / x_std
+            x_dot = model(input) * y_std + y_mean
+            prediction[i, :8] = prediction[i-1, :8] + x_dot * dt
+
+        norm_error = torch.mean(torch.abs(prediction - x_test)) / x_std[:8]
+        norm_error = torch.nan_to_num(norm_error, nan=10, posinf=10, neginf=10)
+
+        if torch.max(norm_error) > 3:
+            n_divergence += 1
+        else:
+            RFMSE_list.append(torch.mean(norm_error))
+    
+    return RFMSE_list, n_divergence

@@ -18,7 +18,7 @@ class SoftThresholdLayer(nn.Module):
 
         weight = torch.Tensor(in_features, out_features)
         self.weight = nn.Parameter(weight)
-        nn.init.normal_(self.weight)
+        nn.init.kaiming_normal_(self.weight)
 
         s = torch.Tensor(1, 1)
         self.s = nn.Parameter(s)
