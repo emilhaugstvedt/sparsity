@@ -34,9 +34,9 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 n_epochs = 100
 lr = 1e-3
 weight_decay = 0 # L2 regulizer parameter for optimizer
-l1 = 1e-4
-early_stopping = 30
-early_stopping_start_epoch = 40
+l1 = 0
+early_stopping = 100
+early_stopping_start_epoch = 100
 scheduler_step_size = 10
 scheduler_gamma = 0.1
 scheduler_start_epoch = 40
@@ -46,7 +46,7 @@ pruning_schedule = {
     "sparsity": [0.25, 0.25, 0.25, 0.25]
 }
 
-swa_start_epoch = 40
+swa_start_epoch = 75
 
 n_models = 10
 
@@ -83,7 +83,7 @@ for n in range(n_models):
              0.2 * averaged_model_parameter + 0.8 * model_parameter
 
     model = MagnitudePruningNet(layers=layers)
-    swa_model = torch.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg)
+    swa_model = torch.optim.swa_utils.AveragedModel(model)
 
     lowest_val_loss = 99999
     best_model = model
@@ -180,13 +180,13 @@ for n in range(n_models):
     run.stop()
 
     if l1 == 0:
-        torch.save(model, f"../models/{dataset}/magnitude_pruning/model_{n+1}.pickle")
-        torch.save(best_model, f"../models/{dataset}/magnitude_pruning/best_model_{n+1}.pickle")
+        #torch.save(model, f"../models/{dataset}/magnitude_pruning/model_{n+1}.pickle")
+        #torch.save(best_model, f"../models/{dataset}/magnitude_pruning/best_model_{n+1}.pickle")
         torch.save(swa_model.state_dict(), f"../models/{dataset}/magnitude_pruning/swa_model{n+1}.pickle")
         torch.save(best_swa_model.state_dict(), f"../models/{dataset}/magnitude_pruning/best_swa_model_{n+1}.pickle")
 
     else:
-        torch.save(model, f"../models/{dataset}/magnitude_pruning/l1/model_{n+1}.pickle")
-        torch.save(best_model, f"../models/{dataset}/magnitude_pruning/l1/best_model_{n+1}.pickle")
+        #torch.save(model, f"../models/{dataset}/magnitude_pruning/l1/model_{n+1}.pickle")
+        #torch.save(best_model, f"../models/{dataset}/magnitude_pruning/l1/best_model_{n+1}.pickle")
         torch.save(swa_model.state_dict(), f"../models/{dataset}/magnitude_pruning/l1/swa_model{n+1}.pickle")
         torch.save(best_swa_model.state_dict(), f"../models/{dataset}/magnitude_pruning/l1/best_swa_model_{n+1}.pickle")

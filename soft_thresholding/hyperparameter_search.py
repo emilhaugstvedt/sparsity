@@ -22,7 +22,7 @@ with open(f"../data/{dataset}/{dataset}_test.pickle", "rb") as f:
 with open(f"../data/{dataset}/{dataset}_val.pickle", "rb") as f:
     val_data = pickle.load(f)
 
-train_loader = dataloader.DataLoader(train_data, batch_size=100, shuffle=True)
+train_loader = dataloader.DataLoader(train_data, batch_size=50, shuffle=True)
 test_loader = dataloader.DataLoader(test_data, batch_size=100, shuffle=True)
 val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 

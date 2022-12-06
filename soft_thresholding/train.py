@@ -31,11 +31,11 @@ test_loader = dataloader.DataLoader(test_data, batch_size=100, shuffle=True)
 val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 
 ### Hyperparameters ###
-n_epochs = 200
+n_epochs = 100
 lr = 1e-3
 weight_decay = 0 # L2 regulizer parameter for optimizer
 l1 = 1e-4
-early_stopping = 50
+early_stopping = 100
 early_stopping_start_epoch = 30
 
 scheduler_step_size = 10
@@ -43,7 +43,7 @@ scheduler_gamma = 0.1
 
 s_init = -2
 
-swa_start_epoch = 10
+swa_start_epoch = 75
 ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged:\
              0.1 * averaged_model_parameter + 0.9 * model_parameter 
 
@@ -74,7 +74,7 @@ for n in range(n_models):
     }
 
     model = SoftThresholdNet(layers=layers, s_init=s_init)
-    swa_model = torch.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg)
+    swa_model = torch.optim.swa_utils.AveragedModel(model)
 
     lowest_val_loss = 99999
     best_model = model
@@ -154,12 +154,12 @@ for n in range(n_models):
     run.stop()
     
     if l1 != 0:
-        torch.save(model, f"../models/{dataset}/soft_thresholding/l1/model_{n+1}.pickle")
-        torch.save(best_model, f"../models/{dataset}/soft_thresholding/l1/best_model_{n+1}.pickle")
+        #torch.save(model, f"../models/{dataset}/soft_thresholding/l1/model_{n+1}.pickle")
+        #torch.save(best_model, f"../models/{dataset}/soft_thresholding/l1/best_model_{n+1}.pickle")
         torch.save(swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/l1/swa_model_{n+1}.pickle")
         torch.save(best_swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/l1/best_swa_model_{n+1}.pickle")
     else: 
-        torch.save(model, f"../models/{dataset}/soft_thresholding/model_{n+1}.pickle")
-        torch.save(best_model, f"../models/{dataset}/soft_thresholding/best_model_{n+1}.pickle")
+        #torch.save(model, f"../models/{dataset}/soft_thresholding/model_{n+1}.pickle")
+        #torch.save(best_model, f"../models/{dataset}/soft_thresholding/best_model_{n+1}.pickle")
         torch.save(swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/swa_model_{n+1}.pickle")
         torch.save(best_swa_model.state_dict(), f"../models/{dataset}/soft_thresholding/best_swa_model_{n+1}.pickle")

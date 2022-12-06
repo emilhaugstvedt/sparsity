@@ -34,13 +34,14 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 n_epochs = 100
 lr = 1e-3
 weight_decay = 0 # L2 regulizer parameter for optimizer
-l1 = 5e-4
+l1 = 1e-4
 early_stopping = 30
-early_stopping_start_epoch = 30
+early_stopping_start_epoch = 20
 scheduler_step_size = 20
 scheduler_gamma = 0.1
 
-swa_start_epoch = 10
+swa_start_epoch = 75
+swa_scheduler_start_epoch = 75
 
 n_models = 10
 
@@ -72,7 +73,7 @@ for n in range(n_models):
              0.2 * averaged_model_parameter + 0.8 * model_parameter
 
     model = L1RegularizationNet(layers=layers)
-    swa_model = torch.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg)
+    swa_model = torch.optim.swa_utils.AveragedModel(model)
 
     lowest_val_loss = 99999
     best_model = model
@@ -88,7 +89,7 @@ for n in range(n_models):
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.9)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=scheduler_step_size, gamma=scheduler_gamma) # Endre med gamm 0.1 etter 50 epochs
     #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer=optimizer, base_lr=1e-5, max_lr=lr*100, step_size_up=20, cycle_momentum=False)
-    #swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="cos", anneal_epochs=10, swa_lr=0.0, 0.001)
+    #swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_epochs=10, swa_lr=1e-4)
     criterion = torch.nn.MSELoss()
 
     for epoch in tqdm(range(n_epochs)):
@@ -156,5 +157,5 @@ for n in range(n_models):
     run.stop()
     torch.save(model, f"../models/{dataset}/L1_regularization/model_{n+1}.pickle")
     torch.save(best_model, f"../models/{dataset}/L1_regularization/best_model_{n+1}.pickle")
-    torch.save(swa_model.state_dict(), f"../models/{dataset}/L1_regularization/swa_model_{n+1}.pickle")
-    torch.save(best_swa_model.state_dict(), f"../models/{dataset}/L1_regularization/best_swa_model_{n+1}.pickle")
+    #torch.save(swa_model.state_dict(), f"../models/{dataset}/L1_regularization/swa_model_{n+1}.pickle")
+    #torch.save(best_swa_model.state_dict(), f"../models/{dataset}/L1_regularization/best_swa_model_{n+1}.pickle")

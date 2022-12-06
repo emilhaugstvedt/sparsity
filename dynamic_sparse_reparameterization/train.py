@@ -32,17 +32,17 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 n_epochs = 200
 lr = 1e-3
 l2 = 0
-l1 = 1e-4
+l1 = 0
 reparameterization_start_epoch = 0
 reparameterization_end_epoch = 100
 reallocation_frequency = 25
 sparsity = 0.1
 
-scheduler_step_size = 10
+scheduler_step_size = 25
 scheduler_gamma = 0.1
 scheduler_start_epoch = 100
 
-swa_start_epoch = 100
+swa_start_epoch = 175
 
 H = 0.001 # Initial thraeshold for reparameterization
 Np = 150 # Number of reparameterizations per reallocation
@@ -83,7 +83,7 @@ for n in range(n_models):
     }
 
     model = DynamicSparseReparameterizationNet(layers=layers, sparsity=sparsity, H=H, Np=Np, fractional_tolerence=fractional_tolerance)
-    swa_model = torch.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg)
+    swa_model = torch.optim.swa_utils.AveragedModel(model)
 
     lowest_val_loss = 99999
     best_model = model
@@ -166,12 +166,12 @@ for n in range(n_models):
     run.stop()
 
     if l1 == 0:
-        torch.save(model, f"../models/{dataset}/dynamic_sparse_reparameterization/{sparsity}/model_{n+1}.pickle")
-        torch.save(best_model, f"../models/{dataset}/dynamic_sparse_reparameterization/{sparsity}/best_model_{n+1}.pickle")
+        #torch.save(model, f"../models/{dataset}/dynamic_sparse_reparameterization/{sparsity}/model_{n+1}.pickle")
+        #torch.save(best_model, f"../models/{dataset}/dynamic_sparse_reparameterization/{sparsity}/best_model_{n+1}.pickle")
         torch.save(swa_model.state_dict(), f"../models/{dataset}/dynamic_sparse_reparameterization/{sparsity}/swa_model_{n+1}.pickle")
         torch.save(best_swa_model.state_dict(), f"../models/{dataset}/dynamic_sparse_reparameterization/{sparsity}/best_swa_model_{n+1}.pickle")
     else:
-        torch.save(model, f"../models/{dataset}/dynamic_sparse_reparameterization/l1/model_{n+1}.pickle")
-        torch.save(best_model, f"../models/{dataset}/dynamic_sparse_reparameterization/l1/best_model_{n+1}.pickle")
+        #torch.save(model, f"../models/{dataset}/dynamic_sparse_reparameterization/l1/model_{n+1}.pickle")
+        #torch.save(best_model, f"../models/{dataset}/dynamic_sparse_reparameterization/l1/best_model_{n+1}.pickle")
         torch.save(swa_model.state_dict(), f"../models/{dataset}/dynamic_sparse_reparameterization/l1/swa_model_{n+1}.pickle")
         torch.save(best_swa_model.state_dict(), f"../models/{dataset}/dynamic_sparse_reparameterization/l1/best_swa_model_{n+1}.pickle")

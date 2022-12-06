@@ -33,12 +33,12 @@ val_loader = dataloader.DataLoader(val_data, batch_size=100, shuffle=True)
 ### Hyperparameters ###
 n_epochs = 100
 lr = 1e-3
-early_stopping = 30
+early_stopping = 100
 early_stopping_start_epoch = 30
 scheduler_step_size = 10
 scheduler_gamma = 0.1
 
-swa_start_epoch = 10
+swa_start_epoch = 75
 
 n_models = 10
 
@@ -68,7 +68,7 @@ for n in range(n_models):
              0.2 * averaged_model_parameter + 0.8 * model_parameter
 
     model = PlainNet(layers=layers)
-    swa_model = torch.optim.swa_utils.AveragedModel(model, avg_fn=ema_avg)
+    swa_model = torch.optim.swa_utils.AveragedModel(model)
 
     lowest_val_loss = 99999
     best_model = model
@@ -150,8 +150,8 @@ for n in range(n_models):
             best_swa_model = copy.deepcopy(swa_model)
 
     run.stop()
-    
-    torch.save(model, f"../models/{dataset}/plain_net/model_{n+1}.pickle")
-    torch.save(best_model, f"../models/{dataset}/plain_net/best_model_{n+1}.pickle")
+
+    #torch.save(model, f"../models/{dataset}/plain_net/model_{n+1}.pickle")
+    #torch.save(best_model, f"../models/{dataset}/plain_net/best_model_{n+1}.pickle")
     torch.save(swa_model.state_dict(), f"../models/{dataset}/plain_net/swa_model_{n+1}.pickle")
     torch.save(best_swa_model.state_dict(), f"../models/{dataset}/plain_net/best_swa_model_{n+1}.pickle")
