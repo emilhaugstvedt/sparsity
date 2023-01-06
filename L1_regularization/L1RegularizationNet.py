@@ -3,9 +3,9 @@ import sys
 
 sys.path.append("../")
 
-from plain_net.PlainNet import PlainNet
+from dense_net.DenseNet import DenseNet
 
-class L1RegularizationNet(PlainNet):
+class L1RegularizationNet(DenseNet):
     def __init__(self, layers):
         super().__init__(layers)
 

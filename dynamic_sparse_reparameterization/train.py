@@ -38,7 +38,7 @@ reparameterization_end_epoch = 100
 reallocation_frequency = 25
 sparsity = 0.1
 
-scheduler_step_size = 25
+scheduler_step_size =  25
 scheduler_gamma = 0.1
 scheduler_start_epoch = 100
 

@@ -77,11 +77,12 @@ def predict(model, x_test, dt, x_mean, x_std, y_mean, y_std):
     prediction[0] = x_test[0]
     for i in range(1,len(x_test)):
         input = (prediction[i-1] - x_mean) / x_std
-        x_dot = model(input) * y_std + y_mean
+        with torch.no_grad():
+            x_dot = model(input) * y_std + y_mean
         prediction[i, :8] = prediction[i-1, :8] + x_dot * dt
     return prediction
 
-def divergence_detection(model, test_data: alu_dataset.Dataset_alu, test_lengths):
+def divergence_detection(models, test_data: alu_dataset.Dataset_alu, test_lengths):
     # Get mean and std from test
     dt = test_data.DT
     x_mean = test_data.x_mean
@@ -91,17 +92,18 @@ def divergence_detection(model, test_data: alu_dataset.Dataset_alu, test_lengths
 
     RFMSE_dict = {length: [] for length in test_lengths}
     divergence_dict = {length: 0 for length in test_lengths}
-    for x_test in test_data.data:
-        prediction = predict(model, x_test, dt, x_mean, x_std, y_mean, y_std)
-        
-        for length in test_lengths:
-            norm_error = torch.mean(torch.abs(prediction[:length, :8] - x_test[:length, :8]), axis=0) / x_std[:8]
-            norm_error = torch.nan_to_num(norm_error, nan=10, posinf=10, neginf=10)
+    for model in models:
+        for x_test in test_data.data:
+            prediction = predict(model, x_test, dt, x_mean, x_std, y_mean, y_std)
+            
+            for length in test_lengths:
+                norm_error = torch.mean(torch.abs(prediction[:length, :8] - x_test[:length, :8]), axis=0) / x_std[:8]
+                norm_error = torch.nan_to_num(norm_error, nan=10, posinf=10, neginf=10)
 
-            if torch.max(norm_error) > 3:
-                divergence_dict[length] += 1
-            else:
-                RFMSE_dict[length].append(torch.mean(norm_error))
+                if torch.max(norm_error) > 3:
+                    divergence_dict[length] += 1
+                else:
+                    RFMSE_dict[length].append(torch.mean(norm_error))
         
     return RFMSE_dict, divergence_dict
 
