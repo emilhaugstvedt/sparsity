@@ -8,20 +8,15 @@ class Dataset_alu(Dataset):
         self.DT = delta_time
 
         self.data = data
-        
         self.x, self.x_mean, self.x_std = self.organize_features(data)
-        
         self.y, self.y_mean, self.y_std, self.y_non_norm = self.organize_target(data)        
-        
         self.x_non_norm = torch.flatten(data,start_dim=0, end_dim=1)
-        
         self.n_samples = self.x.shape[0]
         
         
     def __getitem__(self, index):
         
         X = self.x[index]
-        
         Y = self.y[index]
         
         return X, Y
@@ -90,9 +85,7 @@ class residual_dataset_alu(Dataset):
         self.n_samples = self.x.shape[0]
 
     def __getitem__(self,index):
-        
         X = self.x[index]
-        
         Y = self.y[index]
         
         return X, Y
@@ -172,9 +165,7 @@ class residual_dataset_alu(Dataset):
 
     def organize_output_min_max(self,X_pbm_dot):
         X_pbm_dot_flat = torch.flatten(X_pbm_dot, start_dim=0, end_dim=1)
-
         residual_not_norm = self.xdot_not_norm - X_pbm_dot_flat
-        
         residual = residual_not_norm/(self.xdot_max - self.xdot_min)
 
         return residual, residual_not_norm
