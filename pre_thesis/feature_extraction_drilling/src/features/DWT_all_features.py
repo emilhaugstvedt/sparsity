@@ -29,9 +29,9 @@ def get_entropy(data):
     data_nz = data[data != 0]
     return - np.sum(((data_nz**2)*np.log(data_nz**2)))
     
-def get_energy(audio):  
-    N = len(audio)
-    return np.sum(np.abs(audio) ** 2) / N
+def get_energy(data):  
+    N = len(data)
+    return np.sum(np.abs(data) ** 2) / N
     
 def get_features(filename, data):
 

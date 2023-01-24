@@ -192,13 +192,13 @@ Heping functions treating the data
 '''
 
 
-def downsample(audio, sr, sr_new = 8000):
-    secs = len(audio)/sr # Number of seconds in signal X
+def downsample(data, sr, sr_new = 8000):
+    secs = len(data)/sr # Number of seconds in signal X
     new_sr = sr_new
     samps = round(secs*new_sr)     # Number of samples to downsample
-    new_audio = resample(audio, samps)
+    new_data = resample(data, samps)
 
-    return new_audio, new_sr
+    return new_data, new_sr
 
 
 #Will resample all files to the target sample rate and produce a 32bit float array
@@ -239,8 +239,8 @@ def extract2FloatArr(lp_wave, str_filename):
 
 #Note: This function truncates the 24 bit samples to 16 bits of precision
 #Reads a wave object returned by the wave.read() method
-#Returns the sample rate, as well as the audio in the form of a 32 bit float numpy array
-#(sample_rate:float, audio_data: float[])
+#Returns the sample rate, as well as the data in the form of a 32 bit float numpy array
+#(sample_rate:float, data_data: float[])
 def read24bitwave(lp_wave):
     nFrames = lp_wave.getnframes()
     buf = lp_wave.readframes(nFrames)
@@ -256,14 +256,14 @@ def bitrate_channels(lp_wave):
     return (bps, lp_wave.getnchannels())
 
 
-def denoise_audio(audio):
-    coeff = pywt.wavedec(audio, 'db8')
+def denoise_data(data):
+    coeff = pywt.wavedec(data, 'db8')
     sigma = np.std(coeff[-1] )
-    n= len( audio )
+    n= len( data )
     uthresh = sigma * np.sqrt(2*np.log(n*np.log2(n)))
     coeff[1:] = ( pywt.threshold( i, value=uthresh, mode='soft' ) for i in coeff[1:] )
-    denoised_audio =  pywt.waverec( coeff, 'db8' )
-    return denoised_audio
+    denoised_data =  pywt.waverec( coeff, 'db8' )
+    return denoised_data
 
 '''
 ##########################################################
