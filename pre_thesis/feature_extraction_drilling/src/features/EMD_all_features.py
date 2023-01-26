@@ -20,9 +20,11 @@ def get_n_best_IMFs(data, n_imfs, n_sifts, select_imfs):
 
     result = []
     for idx in range(n_imfs):
-        if idx in select_imfs:
-            result.append(IMFs[idx])
-    
+        if (idx in select_imfs):
+            if idx < len(IMFs):
+                result.append(IMFs[idx])
+            else:
+                result.append(np.zeros(len(data)))
     return result
 
 def get_t(y, sr):
@@ -93,7 +95,7 @@ def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
 
     print("Data loaded")
 
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].iloc[1100000:1300000].values, 10000)
+    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].values, 1000)
 
     print("Timeseries chopped")
 

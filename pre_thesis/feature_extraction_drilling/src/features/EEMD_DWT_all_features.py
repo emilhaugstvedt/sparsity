@@ -29,8 +29,12 @@ def get_n_best_IMFs(data, n_imfs, n_sifts, select_imfs):
     result = []
     IMFs = eemd.eemd(data, max_imf = n_imfs)
     for idx in range(len(IMFs)):
-        if idx in select_imfs:
-            result.append(IMFs[idx])
+        if (idx in select_imfs):
+            if idx < len(IMFs):
+                result.append(IMFs[idx])
+            else:
+                result.append(np.zeros(len(data)))
+            
 
     return result
 
@@ -113,13 +117,13 @@ def get_small_dataset(select_imfs, n_samples = 10, n_imfs = 10, n_sifts = 15 , n
 
     print("Data loaded")
 
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].iloc[1100000:1300000].values, 10000)
+    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].values, 1000)
 
     print("Timeseries chopped")
     
     df = pd.DataFrame()
     for i, timeserie in enumerate(chopped_timeseries):
-        print(f'Processing (EEMD): sample number {i} of {n_samples}')
+        print(f'Processing (EEMD): sample number {i} of {len(chopped_timeseries)}')
 
         IMFs = get_n_best_IMFs(timeserie, n_imfs, n_sifts, select_imfs)
 
@@ -131,16 +135,17 @@ def get_small_dataset(select_imfs, n_samples = 10, n_imfs = 10, n_sifts = 15 , n
                 row = pd.DataFrame()
                 row['name'] = [i]
                 row = row['name'].apply(get_features, data = cD)
-
-                features = pd.concat([features, row], axis=1)
-         
-        df = pd.concat([df, features], ignore_index=True)
+            
+            features = pd.concat([features, row], axis=1)
+            features.reset_index(inplace=True, drop=True)
+            
+        df = pd.concat([df, features])
    
     
     #names = df.pop(38)
     #labels = df.pop(39)
     #df['name'] = names
-    #df['label'] = labels
+    #df['label'] = labelsß
     
     
     #del df['38']

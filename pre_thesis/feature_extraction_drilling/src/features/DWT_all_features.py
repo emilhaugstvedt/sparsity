@@ -80,9 +80,11 @@ def get_dataset(n_levels = 10):
     (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
     data = data1_df.iloc[imin:]
 
+    data = data["DHT001_ECD"].values
+
     print("Data loaded")
 
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].iloc[1100000:1300000].values, 10000)
+    chopped_timeseries = chop_timeseries(data, 1000)
 
     print("Timeseries chopped")
     

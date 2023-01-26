@@ -69,7 +69,7 @@ def get_small_dataset():
 
     print("Data loaded")
 
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].iloc[1100000:1300000].values, 10000)
+    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].values, 1000)
 
     print("Timeseries chopped")
 
@@ -97,7 +97,7 @@ def main():
     start = time.time()
     df =  get_small_dataset()
     print(f'Shape of features: {df.shape}')
-    df.to_csv(f'features/new_features/noDecomp_complete.csv', sep=';')
+    df.to_csv(f'features/new_features/noDecomp_complete.csv')
     print(f' Processing finished, total time used = {time.time() - start}')
 
 main()

@@ -1,16 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov  6 11:20:56 2020
-
-@author: andrine
-"""
-
 import pandas as pd
-import os
 import numpy as np
 from PyEMD import EEMD
-import sys
 from scipy.stats import skew 
 import random
 import time
@@ -28,8 +18,11 @@ def get_n_best_IMFs(data, n_imfs, n_sifts, select_imfs):
 
     result = []
     for idx in range(n_imfs):
-        if idx in select_imfs:
-            result.append(IMFs[idx])
+        if (idx in select_imfs):
+            if (idx < len(IMFs)):
+                result.append(IMFs[idx])
+            else:
+                result.append(np.zeros(len(data)))
     
     return result
 
@@ -98,9 +91,11 @@ def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
     (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
     data = data1_df.iloc[imin:]
 
+    data = data["DHT001_ECD"].values
+
     print("Data loaded")
 
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].iloc[1100000:1300000], 10000)
+    chopped_timeseries = chop_timeseries(data, 1000)
 
     print("Timeseries chopped")
 
@@ -108,9 +103,9 @@ def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
     
     df = pd.DataFrame()
     for i, timeserie in enumerate(chopped_timeseries):
-        print(f'Processing (EMD): sample number {i} of {len(chopped_timeseries)}')
+        print(f'Processing (EEMD): sample number {i} of {len(chopped_timeseries)}')
 
-        IMFs = get_n_best_IMFs(timeserie.values, n_imfs, n_sifts, select_imfs)
+        IMFs = get_n_best_IMFs(timeserie, n_imfs, n_sifts, select_imfs)
 
         features = pd.DataFrame()
         print(f'Processing / feature extract: n number {i} of {len(chopped_timeseries)}')
@@ -133,7 +128,7 @@ def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
 # If num mfcc = 30 --> label = [211], filename = [210]
 def main():
     start = time.time()
-    select_imfs = [1,2,3,4,5] 
+    select_imfs = [1, 2, 3, 4, 5] 
     df =  get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15)
     print(f'Shape of features: {df.shape}')
     df.to_csv(f'features/new_features/EEMD_complete_samples.csv')

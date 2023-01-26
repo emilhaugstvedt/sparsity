@@ -298,7 +298,7 @@ def get_X_y(decomp_type, feature_type = 'all', pure = True,normal = True,
     Feature type: simple, HOS or MFCC or all
     k: NB! k has to be 10 or 30 if fs_auto_encoder is True
     '''
-    dataset = pd.read_csv(MODULE_PATH + f'/src/features/features/{decomp_type}.csv',  sep=',')
+    dataset = pd.read_csv(MODULE_PATH + f'/src/features/features/{decomp_type}.csv',  ',')
     dataset = dataset.drop('Unnamed: 0', axis = 1)
 
     if pure:
@@ -450,7 +450,7 @@ def get_diagnosis_df():
     '''
     Returns pandas dataframe with the PersonID and corresponding diagnose, list of all the types of diseases
     '''
-    diagnosis_df = pd.read_csv(patient_info_path + 'patient_diagnosis.csv', sep=",", names=['pId', 'diagnosis'])
+    diagnosis_df = pd.read_csv(patient_info_path + 'patient_diagnosis.csv', ",", names=['pId', 'diagnosis'])
     ds = diagnosis_df['diagnosis'].unique()
     return diagnosis_df, ds
 
@@ -463,7 +463,7 @@ def get_file_info_df():
 
     files_ = []
     for f in file_names:
-        df = pd.read_csv(raw_data_path + '/' + f + '.txt', sep='\t', names=['start', 'end', 'crackles', 'wheezes'])
+        df = pd.read_csv(raw_data_path + '/' + f + '.txt', '\t', names=['start', 'end', 'crackles', 'wheezes'])
         df['filename'] = f
         #get filename features
         f_features = get_filename_info(f)
