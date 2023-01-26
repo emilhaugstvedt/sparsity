@@ -43,33 +43,23 @@ def get_features(name, data):
     return pd.Series(np.hstack((ft0_trunc , ft1_trunc, ft2_trunc, ft3_trunc, ft4_trunc, ft5_trunc)))
 
 
-def get_column_names():
+def get_column_names(feature):
     stats = ['mean' , 'std' , 'skew', 'max', 'median', 'min']
     stats_HOS = stats + ['energy', 'entropy']
     others = ['zcr', 'spec_roll_off' , 'spec_centroid', 'spec_contrast', 'spec_bandwidth']
     cols = []
+    base = feature
     for stat in stats_HOS:
-        cols.append(stat)
+        cols.append(base + "_" + stat)
        
     for s in others:
         for stat in stats:
-            cols.append(s + '_' + stat) 
+            cols.append(base + "_" +  s + '_' + stat) 
     return cols
 
-def get_small_dataset():
+def get_small_dataset(data):
 
-    with open('data/Case_2_a_only_basic_DQ', 'rb') as f:
-        ((data1_1_df, data1_2_df, data1_3_df),(mean1_df,std1_df)) = pickle.load(f)
-
-    data1_df = pd.concat([data1_1_df,data1_2_df,data1_3_df],axis=0)
-    data1_df = data1_df * std1_df + mean1_df
-
-    (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
-    data = data1_df.iloc[imin:]
-
-    print("Data loaded")
-
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].values, 1000)
+    chopped_timeseries = chop_timeseries(data, 1000)
 
     print("Timeseries chopped")
 
@@ -81,9 +71,7 @@ def get_small_dataset():
         row['name'] = [i]
         row = row['name'].apply(get_features, data=timeserie)
 
-        df = pd.concat([row, df], ignore_index=True)
-    
-    df.columns = get_column_names()
+        df = pd.concat([df, row], ignore_index=True)
     
     return df
 
@@ -94,10 +82,25 @@ def get_small_dataset():
 # If num mfcc = 30 --> label = [211], filename = [210]
 # If num mfcc = 40 --> label = [271], filename = [270]
 def main():
+    with open('data/Case_2_a_only_basic_DQ', 'rb') as f:
+        ((data1_1_df, data1_2_df, data1_3_df),(mean1_df,std1_df)) = pickle.load(f)
+
+    data1_df = pd.concat([data1_1_df,data1_2_df,data1_3_df],axis=0)
+    data1_df = data1_df * std1_df + mean1_df
+
+    (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
+    data = data1_df.iloc[imin:]
+
+    features = ["ASMPAM1_T", "ASMPAM2_T", "ASMPAM3_T", "FLIAVG", "FLOAVG", "HKLDAV", "ROPA"]
+
+    data = data[features].iloc[1130000:1230000]
+    print("Data loaded")
+    print("Creating features.")
     start = time.time()
-    df =  get_small_dataset()
-    print(f'Shape of features: {df.shape}')
-    df.to_csv(f'features/new_features/noDecomp_complete.csv')
+    for feature in features:
+        df =  get_small_dataset(data[feature].values)
+        df.columns = get_column_names(feature)
+        df.to_csv(f'features/new_features/{feature}/noDecomp_complete.csv')
     print(f' Processing finished, total time used = {time.time() - start}')
 
 main()

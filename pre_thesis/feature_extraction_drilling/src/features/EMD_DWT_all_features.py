@@ -25,7 +25,7 @@ def get_n_best_IMFs(data, n_imfs, n_sifts, select_imfs):
     emd = EMD(trials=m_trials)
     emd.spline_kind="slinear"
     emd.FIXE = n_sifts
-    # Execute EMD on S
+    # Execute emd on S
     result = []
     IMFs = emd.emd(data, max_imf = n_imfs)
     for idx in range(len(IMFs)):
@@ -34,7 +34,7 @@ def get_n_best_IMFs(data, n_imfs, n_sifts, select_imfs):
                 result.append(IMFs[idx])
             else:
                 result.append(np.zeros(len(data)))
-
+            
 
     return result
 
@@ -83,13 +83,13 @@ def get_features(filename , data):
     return pd.Series(np.hstack((ft0_trunc, ft1_trunc, ft2_trunc, ft3_trunc, ft4_trunc, ft5_trunc)))
 
 
-def get_column_names(select_imfs, n_levels):
+def get_column_names(feature, select_imfs, n_levels):
     stats = ['mean' , 'std' , 'skew', 'max', 'median', 'min']
     stats_HOS = stats + ['energy', 'entropy']
     others = ['zcr', 'spec_roll_off' , 'spec_centroid', 'spec_contrast', 'spec_bandwidth']
     cols = []
     for n in select_imfs:
-        base_1 = f'IMF_{n}_'
+        base_1 = f'{feature}_EMD_DWT_IMF_{n}_'
         for i in range(n_levels):
             base = base_1 + f'level_{i}_'
             for stat in stats_HOS:
@@ -98,59 +98,37 @@ def get_column_names(select_imfs, n_levels):
             for s in others:
                 for stat in stats:
                     cols.append(base + s + '_' + stat)
-               
-    #cols.append('name')
-    #cols.append('label')    
+                
     return cols
 
 
-def get_small_dataset(select_imfs, n_samples = 10, n_imfs = 10, n_sifts = 15 , n_levels = 5):
+def get_small_dataset(data, select_imfs, n_imfs = 10, n_sifts = 15 , n_levels = 5):
     random.seed(20)
-    with open('data/Case_2_a_only_basic_DQ', 'rb') as f:
-        ((data1_1_df, data1_2_df, data1_3_df),(mean1_df,std1_df)) = pickle.load(f)
 
-    data1_df = pd.concat([data1_1_df,data1_2_df,data1_3_df],axis=0)
-    data1_df = data1_df * std1_df + mean1_df
-
-    (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
-    data = data1_df.iloc[imin:]
-
-    print("Data loaded")
-
-    chopped_timeseries = chop_timeseries(data["DHT001_ECD"].values, 1000)
+    chopped_timeseries = chop_timeseries(data, 1000)
 
     print("Timeseries chopped")
     
     df = pd.DataFrame()
     for i, timeserie in enumerate(chopped_timeseries):
-        print(f'Processing (EMD): sample number {i} of {n_samples}')
+        print(f'Processing (emd): sample number {i} of {len(chopped_timeseries)}')
 
         IMFs = get_n_best_IMFs(timeserie, n_imfs, n_sifts, select_imfs)
-
         features = pd.DataFrame()
-        print(f'Processing / feature extract: sample number {i} of {len(chopped_timeseries)}')
-        for (idx_1, imf) in enumerate(IMFs):
+        for idx_1 in select_imfs:
+
+            if (idx_1 < len(IMFs)):
+                imf = IMFs[idx_1]
+            else:
+                imf = np.zeros(len(timeserie))
+
             dwt = get_n_best_levels(imf, n_levels)
+            row = pd.DataFrame()
             for (idx_2, cD) in enumerate(dwt):
-                row = pd.DataFrame()
                 row['name'] = [i]
                 row = row['name'].apply(get_features, data = cD)
-
                 features = pd.concat([features, row], axis=1)
-         
-        df = pd.concat([df, features], ignore_index=True)
-   
-    
-    #names = df.pop(38)
-    #labels = df.pop(39)
-    #df['name'] = names
-    #df['label'] = labels
-    
-    
-    #del df['38']
-    #del df['39']
-    
-    df.columns = get_column_names(select_imfs , n_levels)
+        df = pd.concat([df, features])
     
     return df
 
@@ -160,11 +138,27 @@ def get_small_dataset(select_imfs, n_samples = 10, n_imfs = 10, n_sifts = 15 , n
 # If num mfcc = 10 --> label = [91], filename = [90]
 # If num mfcc = 30 --> label = [211], filename = [210]
 def main():
+    with open('data/Case_2_a_only_basic_DQ', 'rb') as f:
+        ((data1_1_df, data1_2_df, data1_3_df),(mean1_df,std1_df)) = pickle.load(f)
+
+    data1_df = pd.concat([data1_1_df,data1_2_df,data1_3_df],axis=0)
+    data1_df = data1_df * std1_df + mean1_df
+
+    (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
+    data = data1_df.iloc[imin:]
+
+    features = ["ASMPAM1_T", "ASMPAM2_T", "ASMPAM3_T", "FLIAVG", "FLOAVG", "HKLDAV", "ROPA"]
+
+    data = data[features].iloc[1130000:1230000]
+
+    print("Data loaded")
+    print("Creating features.")
     start = time.time()
-    n_samples = 2000 # 12463
-    df =  get_small_dataset(select_imfs=[1,2,3,4,5] , n_samples = n_samples, n_imfs = 10, n_sifts = 15)
-    print(f'Shape of features: {df.shape}')
-    df.to_csv(f'features/new_features/EMD_DWT_complete_{n_samples}_samples.csv')
+    start = time.time()
+    for feature in features:
+        df =  get_small_dataset(data[feature].values, select_imfs=[1,2,3,4,5], n_imfs = 10, n_sifts = 15, n_levels=5)
+        df.columns = get_column_names(feature, select_imfs=[1,2,3,4,5], n_levels= 5)
+        df.to_csv(f'features/new_features/{feature}/EMD_DWT_complete_samples.csv')
     print(f' Processing finished, total time used = {time.time() - start}')
 
 main()

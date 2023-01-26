@@ -61,13 +61,13 @@ def get_features(filename , data):
     return pd.Series(np.hstack((ft0_trunc , ft1_trunc, ft2_trunc, ft3_trunc, ft4_trunc, ft5_trunc)))
 
 
-def get_column_names(select_imfs):
+def get_column_names(feature, select_imfs):
     stats = ['mean' , 'std' , 'skew', 'max', 'median', 'min']
     stats_HOS = stats + ['energy', 'entropy']
     others = ['zcr', 'spec_roll_off' , 'spec_centroid', 'spec_contrast', 'spec_bandwidth']
     cols = []
     for n in select_imfs:
-        base = f'IMF_{n}_'
+        base = f'{feature}_EEMD_IMF_{n}_'
         for stat in stats_HOS:
             cols.append(base + stat)
            
@@ -79,27 +79,12 @@ def get_column_names(select_imfs):
     return cols
 
 
-def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
+def get_small_dataset(data, select_imfs, n_imfs = 10, n_sifts = 15):
     random.seed(20)
-
-    with open('data/Case_2_a_only_basic_DQ', 'rb') as f:
-        ((data1_1_df, data1_2_df, data1_3_df),(mean1_df,std1_df)) = pickle.load(f)
-
-    data1_df = pd.concat([data1_1_df,data1_2_df,data1_3_df],axis=0)
-    data1_df = data1_df * std1_df + mean1_df
-
-    (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
-    data = data1_df.iloc[imin:]
-
-    data = data["DHT001_ECD"].values
-
-    print("Data loaded")
 
     chopped_timeseries = chop_timeseries(data, 1000)
 
     print("Timeseries chopped")
-
-    print(len(get_column_names(select_imfs)))
     
     df = pd.DataFrame()
     for i, timeserie in enumerate(chopped_timeseries):
@@ -115,9 +100,7 @@ def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
             row = row['name'].apply(get_features, data=imf)
             features = pd.concat([features, row], ignore_index=True, axis=1)
         
-        df = pd.concat([features, df], ignore_index=True)
-   
-    df.columns = get_column_names(select_imfs)
+        df = pd.concat([df, features], ignore_index=True)
     
     return df
 
@@ -127,11 +110,26 @@ def get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15):
 # If num mfcc = 10 --> label = [91], filename = [90]
 # If num mfcc = 30 --> label = [211], filename = [210]
 def main():
+    with open('data/Case_2_a_only_basic_DQ', 'rb') as f:
+        ((data1_1_df, data1_2_df, data1_3_df),(mean1_df,std1_df)) = pickle.load(f)
+
+    data1_df = pd.concat([data1_1_df,data1_2_df,data1_3_df],axis=0)
+    data1_df = data1_df * std1_df + mean1_df
+
+    (imin,_) = next((i, el) for i, el in enumerate(data1_df.HDEP.values) if el < 200)
+    data = data1_df.iloc[imin:]
+
+    features = ["ASMPAM1_T", "ASMPAM2_T", "ASMPAM3_T", "FLIAVG", "FLOAVG", "HKLDAV", "ROPA"]
+
+    data = data[features].iloc[1130000:1230000]
+    print("Data loaded")
+    print("Creating features.")
     start = time.time()
     select_imfs = [1, 2, 3, 4, 5] 
-    df =  get_small_dataset(select_imfs, n_imfs = 10, n_sifts = 15)
-    print(f'Shape of features: {df.shape}')
-    df.to_csv(f'features/new_features/EEMD_complete_samples.csv')
+    for feature in features:
+        df =  get_small_dataset(data[feature].values, select_imfs, n_imfs = 10, n_sifts = 15)
+        df.columns = get_column_names(feature, select_imfs)
+        df.to_csv(f'features/new_features/{feature}/EEMD_complete_samples.csv')
     print(f' Processing finished, total time used = {time.time() - start}')
 
 main()
