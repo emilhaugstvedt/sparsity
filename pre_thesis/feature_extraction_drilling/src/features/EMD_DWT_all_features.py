@@ -149,7 +149,7 @@ def main():
 
     features = ["ASMPAM1_T", "ASMPAM2_T", "ASMPAM3_T", "FLIAVG", "FLOAVG", "HKLDAV", "ROPA"]
 
-    data = data[features].iloc[1130000:1230000]
+    data = data[features].iloc[1080000:1325000]
 
     print("Data loaded")
     print("Creating features.")

@@ -1,6 +1,8 @@
 import pandas as pd
+import os
 import numpy as np
 from PyEMD import EEMD
+import sys
 from scipy.stats import skew 
 import random
 import time
@@ -19,11 +21,10 @@ def get_n_best_IMFs(data, n_imfs, n_sifts, select_imfs):
     result = []
     for idx in range(n_imfs):
         if (idx in select_imfs):
-            if (idx < len(IMFs)):
+            if idx < len(IMFs):
                 result.append(IMFs[idx])
             else:
                 result.append(np.zeros(len(data)))
-    
     return result
 
 def get_t(y, sr):
@@ -52,6 +53,9 @@ def get_features(filename , data):
     ### Get HOS and simple features 
     ft0_trunc = np.hstack((np.mean(data), np.std(data), skew(data), np.max(data), np.median(data), np.min(data), get_energy(data), get_entropy(data)))
   
+    ### MFCC features
+    #ft1_trunc = np.hstack((np.mean(ft1, axis=1), np.std(ft1, axis=1), skew(ft1, axis = 1), np.max(ft1, axis = 1), np.median(ft1, axis = 1), np.min(ft1, axis = 1)))
+    
     ### Spectral Features 
     ft1_trunc = np.hstack((np.mean(ft1), np.std(ft1), skew(ft1), np.max(ft1), np.median(ft1), np.min(ft1)))
     ft2_trunc = np.hstack((np.mean(ft2), np.std(ft2), skew(ft2), np.max(ft2), np.median(ft2), np.min(ft2)))
@@ -67,7 +71,7 @@ def get_column_names(feature, select_imfs):
     others = ['zcr', 'spec_roll_off' , 'spec_centroid', 'spec_contrast', 'spec_bandwidth']
     cols = []
     for n in select_imfs:
-        base = f'{feature}_EEMD_IMF_{n}_'
+        base = f'{feature}_EMD_IMF_{n}_'
         for stat in stats_HOS:
             cols.append(base + stat)
            
@@ -121,11 +125,11 @@ def main():
 
     features = ["ASMPAM1_T", "ASMPAM2_T", "ASMPAM3_T", "FLIAVG", "FLOAVG", "HKLDAV", "ROPA"]
 
-    data = data[features].iloc[1130000:1230000]
+    data = data[features].iloc[1080000:1325000]
     print("Data loaded")
     print("Creating features.")
     start = time.time()
-    select_imfs = [1, 2, 3, 4, 5] 
+    select_imfs = [1,2,3,4,5]
     for feature in features:
         df =  get_small_dataset(data[feature].values, select_imfs, n_imfs = 10, n_sifts = 15)
         df.columns = get_column_names(feature, select_imfs)
